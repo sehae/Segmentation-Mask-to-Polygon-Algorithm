@@ -1,3 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
 *.checkpoint.pt filter=lfs diff=lfs merge=lfs -text
+*sam2_trained.pt* filter=lfs diff=lfs merge=lfs -text

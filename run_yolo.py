@@ -5,7 +5,7 @@ import numpy as np
 import cv2
 
 # Load Trained Model
-model = YOLO("YOLOv11 Instance Segmentation/best.pt")
+model = YOLO("YOLOv11 Instance Segmentation/yolov11_instance_trained.pt")
 
 # Run Inference
 results = model("Data/sample1.png")
