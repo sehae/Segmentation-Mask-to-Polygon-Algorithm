@@ -20,15 +20,15 @@ timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 # Define folder paths
 base_dir = os.path.dirname(os.path.abspath(__file__))  # Get the script's directory
 output_folder = os.path.join(base_dir, "YOLOv11 Instance Segmentation", "runs", f"sample_{timestamp}")
+ground_truth_folder = os.path.join(output_folder, "Ground Truth")
 refined_folder = os.path.join(output_folder, "Refined Masks")
-contour_folder = os.path.join(output_folder, "Contour")
 final_folder = os.path.join(output_folder, "Final Output")
 
 # Create necessary directories
 try:
+    os.makedirs(ground_truth_folder, exist_ok=True)
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(refined_folder, exist_ok=True)
-    os.makedirs(contour_folder, exist_ok=True)
     os.makedirs(final_folder, exist_ok=True)
 except Exception as e:
     print(f"Error creating folders: {e}")
@@ -37,6 +37,21 @@ except Exception as e:
 # Save the result image
 filename = os.path.join(output_folder, "result.png")
 results[0].save(filename=filename)
+
+# Ground-truth mask
+masks = results[0].masks
+if masks is not None:
+    for i, mask in enumerate(masks.data):
+        try:
+            mask_image = mask.cpu().numpy().astype(np.uint8) * 255
+            mask_filename = os.path.join(ground_truth_folder, f"mask_result_{i + 1}.png")
+            cv.imwrite(mask_filename, mask_image)
+        except Exception as e:
+            print(f"Error saving mask {i + 1}: {e}")
+else:
+    print("No masks detected.")
+    exit(1)
+
 
 # Process masks
 masks = results[0].masks
@@ -100,3 +115,29 @@ if masks is not None:
         except Exception as e:
             print(f"Error processing contours for mask {i + 1}: {e}")
 
+# Load original image dimensions
+h, w, _ = img.shape
+
+# Create a blank image (black background) with 3 color channels
+combined_mask = np.zeros((h, w, 3), dtype=np.uint8)
+
+# Iterate through refined masks and add them to the combined mask
+for i, mask in enumerate(masks.data):
+    try:
+        mask_path = os.path.join(final_folder, f"final_result_{i + 1}.png")
+        mask_image = cv.imread(mask_path, cv.IMREAD_COLOR)  # Read in color
+
+        # Ensure the mask is resized to match the original image dimensions
+        mask_image = cv.resize(mask_image, (w, h), interpolation=cv.INTER_NEAREST)
+
+        # Combine the mask (ensuring white areas remain white)
+        combined_mask = cv.addWeighted(combined_mask, 1.0, mask_image, 1.0, 0)  # Blend images
+
+    except Exception as e:
+        print(f"Error combining mask {i + 1}: {e}")
+
+# Save the final combined mask
+combined_mask_path = os.path.join(final_folder, "combined_mask.png")
+cv.imwrite(combined_mask_path, combined_mask)
+
+print(f"Combined mask saved at: {combined_mask_path}")
